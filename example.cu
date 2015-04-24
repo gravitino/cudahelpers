@@ -1,0 +1,46 @@
+#include <vector>
+
+#include "cuda_helpers.cuh"
+
+#define N ((1L)<<(16))
+#define BLOCK_SIZE (1024)
+
+__global__ 
+void reverse_kernel(int * array, size_t n) {
+
+    size_t thid = blockDim.x*blockIdx.x+threadIdx.x;
+    
+    if (thid < n/2) {
+        const int lower = array[thid];
+        const int upper = array[N-thid-1];
+        array[thid] = upper;
+        array[N-thid-1] = lower;
+    }
+}
+
+int main () {
+
+    TIMERSTART(allover)
+
+    std::vector<int> host(N);
+    for (size_t i = 0; i < N; i++)
+        host[i] = i;
+    
+    int * device = NULL;
+    cudaMalloc(&device, sizeof(int)*N);                                   CUERR
+    cudaMemcpy(device, host.data(), sizeof(int)*N, 
+               cudaMemcpyHostToDevice);                                   CUERR
+    
+    TIMERSTART(kernel)
+    reverse_kernel<<<SDIV(N, BLOCK_SIZE), BLOCK_SIZE>>>(device, N);       CUERR
+    TIMERSTOP(kernel)
+
+    cudaMemcpy(host.data(), device, sizeof(int)*N,  
+               cudaMemcpyDeviceToHost);                                   CUERR
+    
+    TIMERSTOP(allover)
+    
+    std::cout << "causing memory error by allocating 2^60 bytes" << std::endl;
+    cudaMalloc(&device, (1L<<60));                                        CUERR
+    cudaDeviceSynchronize();
+}
