@@ -4,7 +4,7 @@
 #include <iostream>
 
 // safe division
-#define SDIV(x,y)(((x)+(y)-1)/(x))
+#define SDIV(x,y)(((x)+(y)-1)/(y))
 
 // error makro
 #define CUERR {                                                              \
