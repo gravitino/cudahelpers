@@ -34,63 +34,7 @@
             cudaEventElapsedTime(&time##label, start##label, stop##label);     \
             std::cout << "TIMING: " << time##label << " ms (" << #label << ")" \
                       << std::endl;
-#endif#include <iostream>
-5
-​
-6
-// safe division
-7
-#define SDIV(x,y)(((x)+(y)-1)/(y))
-8
-​
-9
-// error makro
-10
-#define CUERR {                                                              \
-11
-    cudaError_t err;                                                         \
-12
-    if ((err = cudaGetLastError()) != cudaSuccess) {                         \
-13
-       std::cout << "CUDA error: " << cudaGetErrorString(err) << " : "       \
-14
-                 << __FILE__ << ", line " << __LINE__ << std::endl;          \
-15
-       exit(1);                                                              \
-16
-    }                                                                        \
-17
-}
-18
-​
-19
-// convenient timers
-20
-#define TIMERSTART(label)                                                    \
-21
-        cudaEvent_t start##label, stop##label;                               \
-22
-        float time##label;                                                   \
-23
-        cudaEventCreate(&start##label);                                      \
-24
-        cudaEventCreate(&stop##label);                                       \
-25
-        cudaEventRecord(start##label, 0);
-26
-​
-27
-#define TIMERSTOP(label)                                                     \
-28
-        cudaEventRecord(stop##label, 0);                                     \
-29
-        cudaEventSynchronize(stop##label);                                   \
-30
-        cudaEventElapsedTime(&time##label, start##label, stop##label);       \
-31
-        std::cout << time##label << " ms (" << #label << ")" << std::endl;
-32
-
+#endif
 
 
 #ifdef __CUDACC__
@@ -160,5 +104,6 @@ public:
 private:
    T v_;
 };
+
 
 #endif
