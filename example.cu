@@ -3,9 +3,8 @@
 #include "cuda_helpers.cuh"
 
 #define N ((1L)<<(16))
-#define BLOCK_SIZE (1024)
 
-__global__ 
+GLOBALQUALIFIER
 void reverse_kernel(int * array, size_t n) {
 
     size_t thid = blockDim.x*blockIdx.x+threadIdx.x;
@@ -28,15 +27,13 @@ int main () {
     
     int * device = NULL;
     cudaMalloc(&device, sizeof(int)*N);                                   CUERR
-    cudaMemcpy(device, host.data(), sizeof(int)*N, 
-               cudaMemcpyHostToDevice);                                   CUERR
+    cudaMemcpy(device, host.data(), sizeof(int)*N, H2D);                  CUERR
     
     TIMERSTART(kernel)
-    reverse_kernel<<<SDIV(N, BLOCK_SIZE), BLOCK_SIZE>>>(device, N);       CUERR
+    reverse_kernel<<<SDIV(N, MAXBLOCKSIZE), MAXBLOCKSIZE>>>(device, N);   CUERR
     TIMERSTOP(kernel)
 
-    cudaMemcpy(host.data(), device, sizeof(int)*N,  
-               cudaMemcpyDeviceToHost);                                   CUERR
+    cudaMemcpy(host.data(), device, sizeof(int)*N, D2H);                  CUERR
     
     TIMERSTOP(allover)
     
