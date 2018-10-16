@@ -1,8 +1,8 @@
 #include <vector>
-
 #include "cuda_helpers.cuh"
 
 #define N ((1L)<<(16))
+
 
 GLOBALQUALIFIER
 void reverse_kernel(int * array, size_t n) {
@@ -18,7 +18,6 @@ void reverse_kernel(int * array, size_t n) {
 }
 
 int main () {
-
     TIMERSTART(allover)
 
     std::vector<int> host(N);
