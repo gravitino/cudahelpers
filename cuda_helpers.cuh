@@ -8,6 +8,15 @@
     + __GNUC_MINOR__ * 100 \
     + __GNUC_PATCHLEVEL__)
 
+#ifdef DEBUG
+#define debug_printf(fmt, ...)                                             \
+        printf("[DEBUG] file " STRINGIZE(__FILE__)                         \
+        ", line " STRINGIZE(__LINE__) ": " STRINGIZE(fmt) "\n",            \
+        __VA_ARGS__);
+#else
+    #define debug_printf(fmt, ...)
+#endif
+
 #define WARPSIZE (32)
 #define MAXBLOCKSIZE (1024)
 
@@ -43,6 +52,26 @@
                       << std::endl;
 #endif
 
+// NOTE only for single-GPU setups
+#ifdef __CUDACC__
+    #define BANDWIDTHSTART(label)                                              \
+        cudaSetDevice(0);                                                      \
+        cudaEvent_t start##label, stop##label;                                 \
+        float time##label;                                                     \
+        cudaEventCreate(&start##label);                                        \
+        cudaEventCreate(&stop##label);                                         \
+        cudaEventRecord(start##label, 0);
+
+    #define BANDWIDTHSTOP(label, bytes)                                        \
+        cudaSetDevice(0);                                                      \
+        cudaEventRecord(stop##label, 0);                                       \
+        cudaEventSynchronize(stop##label);                                     \
+        cudaEventElapsedTime(&time##label, start##label, stop##label);         \
+        double bandwidth##label = (bytes)*1000UL/time##label/(1UL<<30);        \
+        std::cout << "TIMING: " << time##label << " ms "                       \
+                << "-> " << bandwidth##label << " GB/s bandwidth ("    \
+                << #label << ")" << std::endl;
+#endif
 
 #ifdef __CUDACC__
     #define CUERR {                                                            \
@@ -217,7 +246,7 @@ uint64_t atomicXor(uint64_t* address, uint64_t val)
         static_cast<unsigned long long int>(val));
 }
 
-/* experimental feature
+/* experimental feature (use with compile option --expt-extended-lambda)
 template<class T>
 GLOBALQUALIFIER void generic_kernel(T f)
 {
