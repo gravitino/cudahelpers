@@ -67,6 +67,7 @@
 #endif
 
 #ifdef __CUDACC__
+    /* FIXME
     #define BANDWIDTHSTART(label)                                              \
         cudaSetDevice(0);                                                      \
         cudaEvent_t start##label, stop##label;                                 \
@@ -84,7 +85,8 @@
         std::cout << "TIMING: " << time##label << " ms "                       \
                 << "-> " << bandwidth##label << " GB/s bandwidth ("            \
                 << #label << ")" << std::endl;
-
+    */
+    
     #define CUERR {                                                            \
         cudaError_t err;                                                       \
         if ((err = cudaGetLastError()) != cudaSuccess) {                       \
