@@ -4,6 +4,8 @@
 #include <type_traits>
 #include <iostream>
 #include <cstdint>
+#include <algorithm>
+#include <assert.h>
 
 // helper for gcc version check
 #define GCC_VERSION (__GNUC__ * 10000                                          \
@@ -277,6 +279,72 @@ private:
     int ffs(std::uint64_t x)
     {
         return __ffsll(x);
+    }
+
+    HOSTQUALIFIER INLINEQUALIFIER
+    void init_cuda_context()
+    {
+        cudaFree(0);
+    }
+
+    HOSTQUALIFIER
+    std::uint64_t available_gpu_memory(float security_factor = 1.0)
+    {
+        assert(security_factor >= 1.0 && "invalid security factor");
+    
+        std::uint64_t free;
+        std::uint64_t total;
+    
+        cudaMemGetInfo(&free, &total);
+    
+        return free / security_factor;
+    }
+    
+    HOSTQUALIFIER
+    std::vector<std::uint64_t> available_gpu_memory(
+        std::vector<std::uint64_t> device_ids, 
+        float security_factor = 1.0)
+    {
+        std::vector<std::uint64_t> available;
+    
+        for(auto id : device_ids)
+        {
+            cudaSetDevice(id);
+            available.push_back(available_gpu_memory(security_factor));
+        }
+    
+        return available;
+    }
+    
+    HOSTQUALIFIER
+    std::uint64_t aggregated_available_gpu_memory(
+        std::vector<std::uint64_t> device_ids, 
+        float security_factor = 1.0,
+        bool uniform = false)
+    {
+        std::sort(device_ids.begin(), device_ids.end());
+        device_ids.erase(
+            std::unique(device_ids.begin(), device_ids.end()), device_ids.end());
+    
+        std::vector<std::uint64_t> available = available_gpu_memory(device_ids, security_factor);
+    
+        if(uniform)
+        {
+            std::uint64_t min_bytes = *std::min_element(available.begin(), available.end());
+    
+            return min_bytes * device_ids.size();
+        }
+        else
+        {
+            std::uint64_t total = 0;
+    
+            for(auto bytes : available)
+            {
+                total += bytes;
+            }
+    
+            return total;
+        }
     }
 
     #if CUDART_VERSION >= 9000

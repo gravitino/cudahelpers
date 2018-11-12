@@ -18,6 +18,8 @@ void reverse_kernel(int * array, size_t n) {
 }
 
 int main () {
+    init_cuda_context();                                                  CUERR
+
     TIMERSTART(allover)
 
     std::vector<int> host(N);
