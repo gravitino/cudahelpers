@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <iostream>
 #include <cstdint>
+#include <vector>
 #include <algorithm>
 #include <assert.h>
 
