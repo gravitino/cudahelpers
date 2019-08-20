@@ -14,7 +14,7 @@
     + __GNUC_PATCHLEVEL__)
 
 // debug prinf
-#ifdef DEBUG
+#ifndef NDEBUG
     #define STRINGIZE_DETAIL(x) #x
     #define STRINGIZE(x) STRINGIZE_DETAIL(x)
     #define debug_printf(fmt, ...)                                             \
@@ -28,6 +28,8 @@
 // common CUDA constants
 #define WARPSIZE (32)
 #define MAXBLOCKSIZE (1024)
+#define MAXSMEMBYTES (49152)
+#define MAXCONSTMEMBYTES (65536)
 #define H2D (cudaMemcpyHostToDevice)
 #define D2H (cudaMemcpyDeviceToHost)
 #define H2H (cudaMemcpyHostToHost)
@@ -43,53 +45,66 @@
 
 #ifndef __CUDACC__
     #define TIMERSTART(label)                                                  \
-        std::chrono::time_point<std::chrono::system_clock> a##label, b##label; \
-        a##label = std::chrono::system_clock::now();
+        std::chrono::time_point<std::chrono::system_clock>                     \
+            timerstart##label,                                                 \
+            timerstop##label;                                                  \
+        timerstart##label = std::chrono::system_clock::now();
 #else
     #define TIMERSTART(label)                                                  \
-        cudaEvent_t start##label, stop##label;                                 \
-        float time##label;                                                     \
-        cudaEventCreate(&start##label);                                        \
-        cudaEventCreate(&stop##label);                                         \
-        cudaEventRecord(start##label, 0);
+        cudaEvent_t timerstart##label, timerstop##label;                       \
+        float timerdelta##label;                                               \
+        cudaEventCreate(&timerstart##label);                                   \
+        cudaEventCreate(&timerstop##label);                                    \
+        cudaEventRecord(timerstart##label, 0);
 #endif
 
 #ifndef __CUDACC__
     #define TIMERSTOP(label)                                                   \
-        b##label = std::chrono::system_clock::now();                           \
-        std::chrono::duration<double> delta##label = b##label-a##label;        \
+        stop##label = std::chrono::system_clock::now();                        \
+        std::chrono::duration<double>                                          \
+            timerdelta##label = timerstop##label-timerstart##label;            \
         std::cout << "# elapsed time ("<< #label <<"): "                       \
-                  << delta##label.count()  << "s" << std::endl;
+                  << timerdelta##label.count()  << "s" << std::endl;
 #else
     #define TIMERSTOP(label)                                                   \
-            cudaEventRecord(stop##label, 0);                                   \
-            cudaEventSynchronize(stop##label);                                 \
-            cudaEventElapsedTime(&time##label, start##label, stop##label);     \
-            std::cout << "TIMING: " << time##label << " ms (" << #label << ")" \
-                      << std::endl;
+            cudaEventRecord(timerstop##label, 0);                              \
+            cudaEventSynchronize(timerstop##label);                            \
+            cudaEventElapsedTime(                                              \
+                &timerdelta##label,                                            \
+                timerstart##label,                                             \
+                timerstop##label);                                             \
+            std::cout <<                                                       \
+                "TIMING: " <<                                                  \
+                timerdelta##label << " ms (" <<                                \
+                #label <<                                                      \
+                ")" << std::endl;
 #endif
 
 #ifdef __CUDACC__
-    /* FIXME
-    #define BANDWIDTHSTART(label)                                              \
-        cudaSetDevice(0);                                                      \
-        cudaEvent_t start##label, stop##label;                                 \
-        float time##label;                                                     \
-        cudaEventCreate(&start##label);                                        \
-        cudaEventCreate(&stop##label);                                         \
-        cudaEventRecord(start##label, 0);
+    #define THROUGHPUTSTART(label)                                             \
+        cudaEvent_t throughputstart##label, throughputstop##label;             \
+        float throughputdelta##label;                                          \
+        cudaEventCreate(&throughputstart##label);                              \
+        cudaEventCreate(&throughputstop##label);                               \
+        cudaEventRecord(throughputstart##label, 0);
 
-    #define BANDWIDTHSTOP(label, bytes)                                        \
-        cudaSetDevice(0);                                                      \
-        cudaEventRecord(stop##label, 0);                                       \
-        cudaEventSynchronize(stop##label);                                     \
-        cudaEventElapsedTime(&time##label, start##label, stop##label);         \
-        double bandwidth##label = (bytes)*1000UL/time##label/(1UL<<30);        \
-        std::cout << "TIMING: " << time##label << " ms "                       \
-                << "-> " << bandwidth##label << " GB/s bandwidth ("            \
-                << #label << ")" << std::endl;
-    */
-    
+    #define THROUGHPUTSTOP(label, bytes)                                       \
+        cudaEventRecord(throughputstop##label, 0);                             \
+        cudaEventSynchronize(throughputstop##label);                           \
+        cudaEventElapsedTime(                                                  \
+            &throughputdelta##label,                                           \
+            throughputstart##label,                                            \
+            throughputstop##label);                                            \
+        double throughput##label =                                             \
+            ((bytes)/1073741824.0)/((throughputdelta##label)/1000.0);          \
+        std::cout <<                                                           \
+            "THROUGHPUT: " <<                                                  \
+            throughputdelta##label << " ms @ " <<                              \
+            (bytes)/1073741824.0 << " GB " <<                                  \
+            "-> " << throughput##label << " GB/s (" <<                         \
+            #label <<                                                          \
+            ")" << std::endl;
+
     #define CUERR {                                                            \
         cudaError_t err;                                                       \
         if ((err = cudaGetLastError()) != cudaSuccess) {                       \
@@ -254,13 +269,13 @@ private:
             static_cast<unsigned long long int>(val));
     }
 
-    /* experimental feature (use with compile option --expt-extended-lambda)
+    #ifdef __CUDACC_EXTENDED_LAMBDA__
     template<class T>
-    GLOBALQUALIFIER void generic_kernel(T f)
+    GLOBALQUALIFIER void lambda_kernel(T f)
     {
         f();
     }
-    */
+    #endif
 
     DEVICEQUALIFIER INLINEQUALIFIER 
     unsigned int lane_id() 
@@ -327,11 +342,13 @@ private:
         device_ids.erase(
             std::unique(device_ids.begin(), device_ids.end()), device_ids.end());
     
-        std::vector<std::uint64_t> available = available_gpu_memory(device_ids, security_factor);
+        std::vector<std::uint64_t> available = 
+            available_gpu_memory(device_ids, security_factor);
     
         if(uniform)
         {
-            std::uint64_t min_bytes = *std::min_element(available.begin(), available.end());
+            std::uint64_t min_bytes = 
+                *std::min_element(available.begin(), available.end());
     
             return min_bytes * device_ids.size();
         }
@@ -382,5 +399,23 @@ private:
     #endif
 
 #endif
+
+HOSTDEVICEQUALIFIER INLINEQUALIFIER
+float B2KB(std::size_t bytes) noexcept { return float(bytes)/1024.0; }
+
+HOSTDEVICEQUALIFIER INLINEQUALIFIER
+float B2MB(std::size_t bytes) noexcept { return float(bytes)/1048576.0; }
+
+HOSTDEVICEQUALIFIER INLINEQUALIFIER
+float B2GB(std::size_t bytes) noexcept { return float(bytes)/1073741824.0; }
+
+HOSTDEVICEQUALIFIER INLINEQUALIFIER
+std::size_t KB2B(float kb) noexcept { return std::size_t(kb)*1024.0; }
+
+HOSTDEVICEQUALIFIER INLINEQUALIFIER
+std::size_t MB2B(float mb) noexcept { return std::size_t(mb)*1048576.0; }
+
+HOSTDEVICEQUALIFIER INLINEQUALIFIER
+std::size_t GB2B(float gb) noexcept { return std::size_t(gb)*1073741824; }
 
 #endif /*CUDA_HELPERS_CUH*/

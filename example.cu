@@ -1,7 +1,8 @@
 #include <vector>
 #include "cuda_helpers.cuh"
 
-#define N ((1L)<<(16))
+#define N ((1L)<<(28))
+
 
 
 GLOBALQUALIFIER
@@ -11,9 +12,9 @@ void reverse_kernel(int * array, size_t n) {
     
     if (thid < n/2) {
         const int lower = array[thid];
-        const int upper = array[N-thid-1];
+        const int upper = array[n-thid-1];
         array[thid] = upper;
-        array[N-thid-1] = lower;
+        array[n-thid-1] = lower;
     }
 }
 
@@ -30,15 +31,33 @@ int main () {
     cudaMalloc(&device, sizeof(int)*N);                                   CUERR
     cudaMemcpy(device, host.data(), sizeof(int)*N, H2D);                  CUERR
     
+    
     TIMERSTART(kernel)
     reverse_kernel<<<SDIV(N, MAXBLOCKSIZE), MAXBLOCKSIZE>>>(device, N);   CUERR
     TIMERSTOP(kernel)
-
-    cudaMemcpy(host.data(), device, sizeof(int)*N, D2H);                  CUERR
     
+    TIMERSTART(lambda_kernel)
+    lambda_kernel<<<SDIV(N, MAXBLOCKSIZE), MAXBLOCKSIZE>>>([=] DEVICEQUALIFIER {
+        size_t thid = blockDim.x*blockIdx.x+threadIdx.x;
+    
+        if (thid < N/2) {
+            const int lower = device[thid];
+            const int upper = device[N-thid-1];
+            device[thid] = upper;
+            device[N-thid-1] = lower;
+        }
+    });                                                                   CUERR
+    TIMERSTOP(lambda_kernel)
+
+    THROUGHPUTSTART(copy)
+    cudaMemcpy(host.data(), device, sizeof(int)*N, D2H);                  CUERR
+    THROUGHPUTSTOP(copy, sizeof(int)*N)
+
     TIMERSTOP(allover)
     
-    std::cout << "causing memory error by allocating 2^60 bytes" << std::endl;
+    std::cout << "available GPU memory: " <<                                  \
+    B2GB(available_gpu_memory()) << " GB" << std::endl <<                      \
+    "causing memory error by allocating 2^60 bytes" << std::endl;             \
     cudaMalloc(&device, (1L<<60));                                        CUERR
     cudaDeviceSynchronize();
 }
