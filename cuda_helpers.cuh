@@ -398,6 +398,8 @@ private:
         }
     #endif
 
+    DEVICEQUALIFIER INLINEQUALIFIER
+    void die() { assert(0); } // mharris style
 #endif
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
@@ -410,10 +412,10 @@ HOSTDEVICEQUALIFIER INLINEQUALIFIER
 float B2GB(std::size_t bytes) noexcept { return float(bytes)/1073741824.0; }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
-std::size_t KB2B(float kb) noexcept { return std::size_t(kb)*1024.0; }
+std::size_t KB2B(float kb) noexcept { return std::size_t(kb)*1024; }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
-std::size_t MB2B(float mb) noexcept { return std::size_t(mb)*1048576.0; }
+std::size_t MB2B(float mb) noexcept { return std::size_t(mb)*1048576; }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
 std::size_t GB2B(float gb) noexcept { return std::size_t(gb)*1073741824; }
