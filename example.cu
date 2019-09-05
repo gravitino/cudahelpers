@@ -3,8 +3,6 @@
 
 #define N ((1L)<<(28))
 
-
-
 GLOBALQUALIFIER
 void reverse_kernel(int * array, size_t n) {
 
@@ -23,6 +21,8 @@ int main () {
 
     TIMERSTART(allover)
 
+    debug_printf("this message will only be shown if NDEBUG is undefined");
+
     std::vector<int> host(N);
     for (size_t i = 0; i < N; i++)
         host[i] = i;
@@ -30,7 +30,6 @@ int main () {
     int * device = NULL;
     cudaMalloc(&device, sizeof(int)*N);                                   CUERR
     cudaMemcpy(device, host.data(), sizeof(int)*N, H2D);                  CUERR
-    
     
     TIMERSTART(kernel)
     reverse_kernel<<<SDIV(N, MAXBLOCKSIZE), MAXBLOCKSIZE>>>(device, N);   CUERR
@@ -55,9 +54,9 @@ int main () {
 
     TIMERSTOP(allover)
     
-    std::cout << "available GPU memory: " <<                                  \
+    std::cout << "available GPU memory: " <<                                   \
     B2GB(available_gpu_memory()) << " GB" << std::endl <<                      \
-    "causing memory error by allocating 2^60 bytes" << std::endl;             \
+    "causing memory error by allocating 2^60 bytes" << std::endl;              \
     cudaMalloc(&device, (1L<<60));                                        CUERR
     cudaDeviceSynchronize();
 }

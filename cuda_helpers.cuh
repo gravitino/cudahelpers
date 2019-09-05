@@ -20,7 +20,7 @@
     #define debug_printf(fmt, ...)                                             \
         printf("[DEBUG] file " STRINGIZE(__FILE__)                             \
         ", line " STRINGIZE(__LINE__) ": " STRINGIZE(fmt) "\n",                \
-        __VA_ARGS__);
+        ##__VA_ARGS__);
 #else
     #define debug_printf(fmt, ...)
 #endif
@@ -283,7 +283,7 @@ private:
         cudaFree(0);
     }
 
-    HOSTQUALIFIER
+    HOSTQUALIFIER INLINEQUALIFIER
     std::uint64_t available_gpu_memory(float security_factor = 1.0)
     {
         assert(security_factor >= 1.0 && "invalid security factor");
@@ -296,7 +296,7 @@ private:
         return free / security_factor;
     }
     
-    HOSTQUALIFIER
+    HOSTQUALIFIER INLINEQUALIFIER
     std::vector<std::uint64_t> available_gpu_memory(
         std::vector<std::uint64_t> device_ids, 
         float security_factor = 1.0)
@@ -312,7 +312,7 @@ private:
         return available;
     }
     
-    HOSTQUALIFIER
+    HOSTQUALIFIER INLINEQUALIFIER
     std::uint64_t aggregated_available_gpu_memory(
         std::vector<std::uint64_t> device_ids, 
         float security_factor = 1.0,
@@ -392,12 +392,12 @@ HOSTDEVICEQUALIFIER INLINEQUALIFIER
 float B2GB(std::size_t bytes) noexcept { return float(bytes)/1073741824.0; }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
-std::size_t KB2B(float kb) noexcept { return std::size_t(kb)*1024; }
+std::size_t KB2B(float kb) noexcept { return std::size_t(kb*1024); }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
-std::size_t MB2B(float mb) noexcept { return std::size_t(mb)*1048576; }
+std::size_t MB2B(float mb) noexcept { return std::size_t(mb*1048576); }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
-std::size_t GB2B(float gb) noexcept { return std::size_t(gb)*1073741824; }
+std::size_t GB2B(float gb) noexcept { return std::size_t(gb*1073741824); }
 
 #endif /*CUDA_HELPERS_CUH*/
