@@ -133,29 +133,6 @@ public:
     //act as a T in all conversion contexts
     constexpr operator T () const noexcept { return v_; }
 
-    // negation on value and bit level
-    constexpr no_init_t& operator - () noexcept { v_ = -v_; return *this; }
-    constexpr no_init_t& operator ~ () noexcept { v_ = ~v_; return *this; }
-
-    // increment/decrement operators
-    constexpr no_init_t& operator ++ ()    noexcept { v_++; return *this; }
-    constexpr no_init_t& operator ++ (int) noexcept { v_++; return *this; }
-    constexpr no_init_t& operator -- ()    noexcept { v_--; return *this; }
-    constexpr no_init_t& operator -- (int) noexcept { v_--; return *this; }
-
-    // assignment operators
-    constexpr no_init_t& operator  += (T v) noexcept { v_  += v; return *this; }
-    constexpr no_init_t& operator  -= (T v) noexcept { v_  -= v; return *this; }
-    constexpr no_init_t& operator  *= (T v) noexcept { v_  *= v; return *this; }
-    constexpr no_init_t& operator  /= (T v) noexcept { v_  /= v; return *this; }
-
-    // bit-wise operators
-    constexpr no_init_t& operator  &= (T v) noexcept { v_  &= v; return *this; }
-    constexpr no_init_t& operator  |= (T v) noexcept { v_  |= v; return *this; }
-    constexpr no_init_t& operator  ^= (T v) noexcept { v_  ^= v; return *this; }
-    constexpr no_init_t& operator >>= (T v) noexcept { v_ >>= v; return *this; }
-    constexpr no_init_t& operator <<= (T v) noexcept { v_ <<= v; return *this; }
-
 private:
     T v_;
 };
