@@ -51,7 +51,7 @@ int main () {
 
     THROUGHPUTSTART(copy)
     cudaMemcpy(host.data(), device, sizeof(int)*N, D2H);                  CUERR
-    THROUGHPUTSTOP(copy, sizeof(int)*N)
+    THROUGHPUTSTOP(copy, sizeof(int), N)
 
     TIMERSTOP(allover)
     

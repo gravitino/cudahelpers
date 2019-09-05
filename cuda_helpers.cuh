@@ -88,7 +88,7 @@
         cudaEventCreate(&throughputstop##label);                               \
         cudaEventRecord(throughputstart##label, 0);
 
-    #define THROUGHPUTSTOP(label, bytes)                                       \
+    #define THROUGHPUTSTOP(label, bytes, num)                                  \
         cudaEventRecord(throughputstop##label, 0);                             \
         cudaEventSynchronize(throughputstop##label);                           \
         cudaEventElapsedTime(                                                  \
@@ -96,12 +96,15 @@
             throughputstart##label,                                            \
             throughputstop##label);                                            \
         double throughput##label =                                             \
-            ((bytes)/1073741824.0)/((throughputdelta##label)/1000.0);          \
+            (((bytes)*(num))/1073741824.0)/((throughputdelta##label)/1000.0);  \
+        double ops##label =                                                    \
+            (num)/((throughputdelta##label)/1000.0);                           \
         std::cout <<                                                           \
             "THROUGHPUT: " <<                                                  \
             throughputdelta##label << " ms @ " <<                              \
-            (bytes)/1073741824.0 << " GB " <<                                  \
-            "-> " << throughput##label << " GB/s (" <<                         \
+            ((bytes)*(num))/1073741824.0 << " GB " <<                          \
+            "-> " << ops##label << " elements/s or " <<                        \
+            throughput##label << " GB/s (" <<                                  \
             #label <<                                                          \
             ")" << std::endl;
 
