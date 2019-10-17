@@ -1,7 +1,7 @@
 all: example
 
 example: example.cu cuda_helpers.cuh
-	nvcc -arch=sm_35 --expt-extended-lambda example.cu -o example -O3
+	nvcc -O3 -arch=sm_35 --expt-extended-lambda example.cu -o example
 
 clean:
 	rm -rf example
