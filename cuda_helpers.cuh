@@ -14,7 +14,7 @@
     + __GNUC_PATCHLEVEL__)
 
 // debug prinf
-#ifndef NDEBUG
+#ifdef _DEBUG
     #define STRINGIZE_DETAIL(x) #x
     #define STRINGIZE(x) STRINGIZE_DETAIL(x)
     #define debug_printf(fmt, ...)                                             \
