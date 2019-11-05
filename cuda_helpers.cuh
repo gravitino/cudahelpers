@@ -118,6 +118,22 @@
     }
 #endif
 
+template<std::uint8_t Bits>
+using uint_t = 
+    typename std::conditional<
+        (Bits > 64),
+        std::false_type,
+        typename std::conditional<
+            (Bits > 32), 
+            std::uint64_t, 
+            typename std::conditional<
+                (Bits > 16), 
+                std::uint32_t, 
+                typename std::conditional<
+                    (Bits > 8), 
+                    std::uint16_t, 
+                    std::uint8_t>::type>::type>::type>::type;
+
 template<class T>
 class no_init_t 
 {
