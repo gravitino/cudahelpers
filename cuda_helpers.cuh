@@ -60,7 +60,7 @@
 
 #ifndef __CUDACC__
     #define TIMERSTOP(label)                                                   \
-        stop##label = std::chrono::system_clock::now();                        \
+        timerstop##label = std::chrono::system_clock::now();                   \
         std::chrono::duration<double>                                          \
             timerdelta##label = timerstop##label-timerstart##label;            \
         std::cout << "# elapsed time ("<< #label <<"): "                       \
