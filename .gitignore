@@ -4,5 +4,6 @@
 *.ptx
 *.cubin
 *.fatbin
+*.dump
 
 example

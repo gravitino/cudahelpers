@@ -6,6 +6,9 @@
 #include <cstdint>
 #include <vector>
 #include <algorithm>
+#include <string>
+#include <fstream>
+#include <sstream>
 #include <assert.h>
 
 // helper for gcc version check
@@ -119,28 +122,28 @@
 #endif
 
 template<std::uint8_t Bits>
-using uint_t = 
+using uint_t =
     typename std::conditional<
         (Bits > 64),
         std::false_type,
         typename std::conditional<
-            (Bits > 32), 
-            std::uint64_t, 
+            (Bits > 32),
+            std::uint64_t,
             typename std::conditional<
-                (Bits > 16), 
-                std::uint32_t, 
+                (Bits > 16),
+                std::uint32_t,
                 typename std::conditional<
-                    (Bits > 8), 
-                    std::uint16_t, 
+                    (Bits > 8),
+                    std::uint16_t,
                     std::uint8_t>::type>::type>::type>::type;
 
 template<class T>
-class no_init_t 
+class no_init_t
 {
 public:
 
     static_assert(std::is_fundamental<T>::value &&
-                  std::is_arithmetic<T>::value, 
+                  std::is_arithmetic<T>::value,
                   "wrapped type must be a fundamental, numeric type");
 
     //do nothing
@@ -192,8 +195,8 @@ private:
     // CAS
     DEVICEQUALIFIER INLINEQUALIFIER
     std::uint64_t atomicCAS(
-        std::uint64_t* address, 
-        std::uint64_t compare, 
+        std::uint64_t* address,
+        std::uint64_t compare,
         std::uint64_t val)
     {
         return atomicCAS(
@@ -207,7 +210,7 @@ private:
     std::uint64_t atomicAdd(std::uint64_t* address, std::uint64_t val)
     {
         return atomicAdd(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -216,7 +219,7 @@ private:
     std::uint64_t atomicExch(std::uint64_t* address, std::uint64_t val)
     {
         return atomicExch(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -225,7 +228,7 @@ private:
     std::uint64_t atomicMin(std::uint64_t* address, std::uint64_t val)
     {
         return atomicMin(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -234,7 +237,7 @@ private:
     std::uint64_t atomicMax(std::uint64_t* address, std::uint64_t val)
     {
         return atomicMax(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -243,7 +246,7 @@ private:
     std::uint64_t atomicAnd(std::uint64_t* address, std::uint64_t val)
     {
         return atomicAnd(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -252,7 +255,7 @@ private:
     std::uint64_t atomicOr(std::uint64_t* address, std::uint64_t val)
     {
         return atomicOr(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -261,7 +264,7 @@ private:
     std::uint64_t atomicXor(std::uint64_t* address, uint64_t val)
     {
         return atomicXor(
-            reinterpret_cast<unsigned long long int*>(address), 
+            reinterpret_cast<unsigned long long int*>(address),
             static_cast<unsigned long long int>(val));
     }
 
@@ -273,8 +276,8 @@ private:
     }
     #endif
 
-    DEVICEQUALIFIER INLINEQUALIFIER 
-    unsigned int lane_id() 
+    DEVICEQUALIFIER INLINEQUALIFIER
+    unsigned int lane_id()
     {
         unsigned int lane;
         asm volatile("mov.u32 %0, %%laneid;" : "=r"(lane));
@@ -303,60 +306,60 @@ private:
     std::uint64_t available_gpu_memory(float security_factor = 1.0)
     {
         assert(security_factor >= 1.0 && "invalid security factor");
-    
+
         std::uint64_t free;
         std::uint64_t total;
-    
+
         cudaMemGetInfo(&free, &total);
-    
+
         return free / security_factor;
     }
-    
+
     HOSTQUALIFIER INLINEQUALIFIER
     std::vector<std::uint64_t> available_gpu_memory(
-        std::vector<std::uint64_t> device_ids, 
+        std::vector<std::uint64_t> device_ids,
         float security_factor = 1.0)
     {
         std::vector<std::uint64_t> available;
-    
+
         for(auto id : device_ids)
         {
             cudaSetDevice(id);
             available.push_back(available_gpu_memory(security_factor));
         }
-    
+
         return available;
     }
-    
+
     HOSTQUALIFIER INLINEQUALIFIER
     std::uint64_t aggregated_available_gpu_memory(
-        std::vector<std::uint64_t> device_ids, 
+        std::vector<std::uint64_t> device_ids,
         float security_factor = 1.0,
         bool uniform = false)
     {
         std::sort(device_ids.begin(), device_ids.end());
         device_ids.erase(
             std::unique(device_ids.begin(), device_ids.end()), device_ids.end());
-    
-        std::vector<std::uint64_t> available = 
+
+        std::vector<std::uint64_t> available =
             available_gpu_memory(device_ids, security_factor);
-    
+
         if(uniform)
         {
-            std::uint64_t min_bytes = 
+            std::uint64_t min_bytes =
                 *std::min_element(available.begin(), available.end());
-    
+
             return min_bytes * device_ids.size();
         }
         else
         {
             std::uint64_t total = 0;
-    
+
             for(auto bytes : available)
             {
                 total += bytes;
             }
-    
+
             return total;
         }
     }
@@ -415,5 +418,109 @@ std::size_t MB2B(float mb) noexcept { return std::size_t(mb*1048576); }
 
 HOSTDEVICEQUALIFIER INLINEQUALIFIER
 std::size_t GB2B(float gb) noexcept { return std::size_t(gb*1073741824); }
+
+// load/store binary dumps of POD vectors
+HOSTQUALIFIER INLINEQUALIFIER
+constexpr std::size_t binary_dump_magic_number() noexcept
+{
+    return 0xAAAAAAAA55555555;
+}
+
+template<class T>
+HOSTQUALIFIER INLINEQUALIFIER
+void dump_binary(
+    const std::vector<T>& data,
+    const std::string& filename) noexcept
+{
+    std::ofstream ofile(filename, std::ios::binary);
+
+    if(ofile.good())
+    {
+        const std::size_t magic_number = binary_dump_magic_number();
+        const std::size_t t_bytes = sizeof(T);
+        const std::size_t size = data.size();
+
+        ofile.write((char *) &magic_number, sizeof(std::size_t));
+        ofile.write((char *) &t_bytes, sizeof(std::size_t));
+        ofile.write((char *) &size, sizeof(std::size_t));
+
+        ofile.write((char *) data.data(), sizeof(T) * size);
+    }
+    else
+    {
+        std::cerr << "Unable to open file." << std::endl;
+    }
+
+    ofile.close();
+}
+
+template<class T>
+HOSTQUALIFIER INLINEQUALIFIER
+std::vector<T> load_binary(
+    const std::string& filename,
+    std::size_t end = 0,
+    std::size_t begin = 0) noexcept
+{
+    std::vector<T> data;
+    std::ifstream ifile(filename, std::ios::binary);
+
+    if(ifile.is_open())
+    {
+        std::size_t magic_number;
+
+        ifile.read((char *) &magic_number, sizeof(std::size_t));
+
+        if(magic_number == binary_dump_magic_number())
+        {
+            std::size_t t_bytes;
+
+            ifile.read((char* ) &t_bytes, sizeof(std::size_t));
+
+            if(t_bytes == sizeof(T))
+            {
+                std::size_t size;
+
+                ifile.read((char* ) &size, sizeof(std::size_t));
+
+                const std::size_t end_ = (end == 0) ? size : end;
+
+                if(begin <= end_ && end_ <= size)
+                {
+                    ifile.seekg(ifile.tellg() + sizeof(T) * begin);
+
+                    const std::size_t diff = end_ - begin;
+
+                    data.resize(diff);
+
+                    ifile.read((char *) data.data(), sizeof(T) * diff);
+                }
+                else
+                {
+                    std::cerr << "Invalid file offsets." << std::endl;
+                    data.resize(0);
+                }
+            }
+            else
+            {
+                std::cerr << "Type mismatch." << std::endl;
+                data.resize(0);
+            }
+        }
+        else
+        {
+            std::cerr << "Invalid file format." << std::endl;
+            data.resize(0);
+        }
+    }
+    else
+    {
+        std::cerr << "Unable to open file." << std::endl;
+        data.resize(0);
+    }
+
+    ifile.close();
+
+    return std::move(data);
+}
 
 #endif /*CUDA_HELPERS_CUH*/
