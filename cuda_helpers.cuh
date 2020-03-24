@@ -190,6 +190,17 @@ private:
     #define HOSTQUALIFIER
 #endif
 
+#ifdef __CUDACC__
+    // only valid for linear kernel i.e. y = z = 0
+    DEVICEQUALIFIER INLINEQUALIFIER
+    std::uint64_t global_thread_id() noexcept
+    {
+        return
+            std::uint64_t(blockDim.x) * std::uint64_t(blockIdx.x) +
+            std::uint64_t(threadIdx.x);
+    }
+#endif
+
 // redefinition of CUDA atomics for common cstdint types
 #ifdef __CUDACC__
     // CAS
